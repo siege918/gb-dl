@@ -130,7 +130,7 @@ let main = async () => {
       filters,
       apiKey,
       name: program.videoName,
-      number: program.videoNumber,
+      number: videoNumber,
       clean: program.clean,
       debug: program.debug,
     });

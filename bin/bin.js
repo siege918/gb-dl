@@ -187,7 +187,7 @@ let main = async () => {
     videoNumber++;
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
-  } while (!program.bulk);
+  } while (program.bulk);
 };
 
 main();

@@ -52,6 +52,7 @@ program
   .option("--archive", "check if video exists in archive before downloading")
   .option("--clean", "ignore previous cache results for query")
   .option("--debug", "show debug statements")
+  .option("--bulk", "Download all videos that match your search criteria")
   .parse(process.argv);
 
 if (!program.apiKey && !GIANTBOMB_TOKEN) {
@@ -122,63 +123,71 @@ let main = async () => {
     filters.push(`video_show:${show.id}`);
   }
 
-  const video = await getVideo({
-    filters,
-    apiKey,
-    name: program.videoName,
-    number: program.videoNumber,
-    clean: program.clean,
-    debug: program.debug,
-  });
+  let { videoNumber } = program;
 
-  if (!video) {
-    console.error("no video found for query");
-    process.exit(1);
-  }
+  do {
+    const video = await getVideo({
+      filters,
+      apiKey,
+      name: program.videoName,
+      number: program.videoNumber,
+      clean: program.clean,
+      debug: program.debug,
+    });
 
-  if (program.dateBefore) {
-    let dateBefore = dayjs(new Date(program.dateBefore));
-    let videoDate = dayjs(new Date(video.publish_date));
-
-    if (
-      !videoDate.isBefore(dateBefore, "day") &&
-      !videoDate.isSame(dateBefore, "day")
-    ) {
-      console.error(
-        `${video.name} was published after ${dateBefore.format("MM/DD/YYYY")}`
-      );
+    if (!video) {
+      console.error("no video found for query");
       process.exit(1);
     }
-  }
 
-  if (program.dateAfter) {
-    let dateAfter = dayjs(new Date(program.dateAfter));
-    let videoDate = dayjs(new Date(video.publish_date));
+    if (program.dateBefore) {
+      let dateBefore = dayjs(new Date(program.dateBefore));
+      let videoDate = dayjs(new Date(video.publish_date));
 
-    if (
-      !videoDate.isAfter(dateAfter, "day") &&
-      !videoDate.isSame(dateAfter, "day")
-    ) {
-      console.error(
-        `${video.name} was published before ${dateAfter.format("MM/DD/YYYY")}`
-      );
-      process.exit(1);
+      if (
+        !videoDate.isBefore(dateBefore, "day") &&
+        !videoDate.isSame(dateBefore, "day")
+      ) {
+        console.error(
+          `${video.name} was published after ${dateBefore.format("MM/DD/YYYY")}`
+        );
+        process.exit(1);
+      }
     }
-  }
 
-  if (program.info) {
-    console.log(video);
-    return;
-  }
+    if (program.dateAfter) {
+      let dateAfter = dayjs(new Date(program.dateAfter));
+      let videoDate = dayjs(new Date(video.publish_date));
 
-  await downloadVideo({
-    video,
-    apiKey,
-    outDir: program.outDir,
-    quality: program.quality,
-    archive: program.archive,
-    debug: program.debug,
-  });
+      if (
+        !videoDate.isAfter(dateAfter, "day") &&
+        !videoDate.isSame(dateAfter, "day")
+      ) {
+        console.error(
+          `${video.name} was published before ${dateAfter.format("MM/DD/YYYY")}`
+        );
+        process.exit(1);
+      }
+    }
+
+    if (program.info) {
+      console.log(video);
+      return;
+    }
+
+    await downloadVideo({
+      video,
+      apiKey,
+      outDir: program.outDir,
+      quality: program.quality,
+      archive: program.archive,
+      debug: program.debug,
+    });
+
+    videoNumber++;
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } while (!program.bulk);
 };
 
 main();
